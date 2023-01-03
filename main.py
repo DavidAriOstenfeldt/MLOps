@@ -12,7 +12,7 @@ from model import MyAwesomeModel
 def cli():
     pass
 
-
+# Training loop
 @click.command()
 @click.option("--lr", default=1e-3, help='learning rate to use for training')
 def train(lr):
@@ -23,7 +23,7 @@ def train(lr):
     model = MyAwesomeModel()
     train_set, _ = mnist()
 
-
+# Evaluation
 @click.command()
 @click.argument("model_checkpoint")
 def evaluate(model_checkpoint):
