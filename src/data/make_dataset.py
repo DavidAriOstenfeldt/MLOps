@@ -27,26 +27,30 @@ def main(input_filepath, output_filepath):
     train = []
     for i in range(5):
         train.append(
-            np.load(f"../../data/raw/corruptmnist/train_{i}.npz", allow_pickle=True)
+            np.load(f"{input_filepath}/train_{i}.npz", allow_pickle=True)
         )
 
-    data = torch.tensor(np.concatenate([img["images"] for img in train])).reshape(
+    data = np.concatenate([img["images"] for img in train]).reshape(
         -1, 1, 28, 28
     )
     targets = torch.tensor(np.concatenate([img["labels"] for img in train]))
+
+    data = np.squeeze(data)
     data = transform_norm(data)
 
     # Prepare test data
-    test = np.load("../../data/raw/corruptmnist/test.npz", allow_pickle=True)
-    test_data = torch.tensor(test["images"]).reshape(-1, 1, 28, 28)
-    test_targets = torch.tensor(test)
+    test = np.load(f"{input_filepath}/test.npz", allow_pickle=True)
+    test_data = test["images"].reshape(-1, 1, 28, 28)
+    test_targets = torch.tensor(test["labels"])
+    test_data = np.squeeze(test_data)
     test_data = transform_norm(test_data)
 
-    np.save("../../data/processed/train_images.npy", data, allow_pickle=True)
-    np.save("../../data/processed/train_labels.npy", targets, allow_pickle=True)
-    np.save("../../data_processed/test_images.npy", test_data, allow_pickle=True)
-    np.save("../../data_processed/test_labels.npy", test_targets, allow_pickle=True)
+    np.save(f"{output_filepath}/train_images.npy", data, allow_pickle=True)
+    np.save(f"{output_filepath}/train_labels.npy", targets, allow_pickle=True)
+    np.save(f"{output_filepath}/test_images.npy", test_data, allow_pickle=True)
+    np.save(f"{output_filepath}/test_labels.npy", test_targets, allow_pickle=True)
 
+    logger.info("finished processing raw data")
 
 if __name__ == "__main__":
     log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
