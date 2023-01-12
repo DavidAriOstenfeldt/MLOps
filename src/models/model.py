@@ -13,16 +13,12 @@ class MyAwesomeModel(nn.Module):
             nn.Conv2d(32, 16, 3),  # [N, 16, 22]
             nn.LeakyReLU(),
             nn.Conv2d(16, 8, 3),  # [N, 8, 20]
-            nn.LeakyReLU()
+            nn.LeakyReLU(),
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(8 * 20 * 20, 128),
-            nn.Dropout(),
-            nn.Linear(128, 10)
+            nn.Flatten(), nn.Linear(8 * 20 * 20, 128), nn.Dropout(), nn.Linear(128, 10)
         )
 
     def forward(self, x):
         return self.classifier(self.backbone(x))
-

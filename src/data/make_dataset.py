@@ -26,13 +26,9 @@ def main(input_filepath, output_filepath):
     # Prepare training data
     train = []
     for i in range(5):
-        train.append(
-            np.load(f"{input_filepath}/train_{i}.npz", allow_pickle=True)
-        )
+        train.append(np.load(f"{input_filepath}/train_{i}.npz", allow_pickle=True))
 
-    data = np.concatenate([img["images"] for img in train]).reshape(
-        -1, 1, 28, 28
-    )
+    data = np.concatenate([img["images"] for img in train]).reshape(-1, 1, 28, 28)
     targets = torch.tensor(np.concatenate([img["labels"] for img in train]))
 
     data = np.squeeze(data)
@@ -53,6 +49,7 @@ def main(input_filepath, output_filepath):
     np.save(f"{output_filepath}/test_labels.npy", test_targets, allow_pickle=True)
 
     logger.info("finished processing raw data")
+
 
 if __name__ == "__main__":
     log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

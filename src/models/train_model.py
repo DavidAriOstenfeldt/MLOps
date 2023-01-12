@@ -4,13 +4,13 @@ import sys
 
 import click
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
-from torch import optim
-import numpy as np
 from model import MyAwesomeModel
+from torch import optim
+from torch.utils.data import DataLoader, Dataset
 
-from torch.utils.data import Dataset, DataLoader
 
 class dataset(Dataset):
     def __init__(self, train):
@@ -29,6 +29,7 @@ class dataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+
 
 @click.command()
 @click.option("--lr", default=1e3, help="learning rate to use for training")
@@ -71,13 +72,17 @@ def train(lr, epoch, batch_size):
                 print(f"Model saved at epoch: {e} with running loss: {running_loss}")
             else:
                 if running_loss < min(train_losses):
-                    torch.save(model.state_dict(), f"models/{model.name}/checkpoint.pth")
-                    print(f"Model saved at epoch: {e} with running loss: {running_loss}")
+                    torch.save(
+                        model.state_dict(), f"models/{model.name}/checkpoint.pth"
+                    )
+                    print(
+                        f"Model saved at epoch: {e} with running loss: {running_loss}"
+                    )
 
             train_losses += [running_loss / len(train_loader)]
 
             fig, ax = plt.subplots()
-            ax.plot(np.arange(0, e+1), train_losses, color="royalblue")
+            ax.plot(np.arange(0, e + 1), train_losses, color="royalblue")
             ax.title.set_text(f"Training curve at epoch: {e}")
             ax.grid()
 
@@ -87,7 +92,9 @@ def train(lr, epoch, batch_size):
             top_p, top_class = ps.topk(1, dim=1)
             equals = top_class == labels.view(*top_class.shape)
             accuracy = torch.mean(equals.type(torch.FloatTensor))
-            print(f"Epoch: {e}, Loss: {running_loss/len(train_loader)}, Accuracy: {accuracy.item() * 100}%")
+            print(
+                f"Epoch: {e}, Loss: {running_loss/len(train_loader)}, Accuracy: {accuracy.item() * 100}%"
+            )
 
 
 if __name__ == "__main__":

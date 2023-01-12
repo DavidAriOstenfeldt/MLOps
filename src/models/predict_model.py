@@ -1,9 +1,9 @@
-import numpy as np
 import click
+import numpy as np
 import torch
 from model import MyAwesomeModel
-
 from torch.utils.data import DataLoader, Dataset
+
 
 class dataset(Dataset):
     def __init__(self, train):
@@ -22,6 +22,7 @@ class dataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+
 
 @click.command()
 @click.argument("model_checkpoint")
@@ -49,6 +50,7 @@ def evaluate(model_checkpoint, test_path):
             accuracy += accuracy_.item()
 
         print(f"Accuracy: {accuracy}")
+
 
 if __name__ == "__main__":
     evaluate()
