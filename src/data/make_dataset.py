@@ -37,6 +37,7 @@ def main(input_filepath, output_filepath):
 
     data = np.squeeze(data)
     data = transform_norm(data)
+    data = data.reshape(-1, 1, 28, 28)
 
     # Prepare test data
     test = np.load(f"{input_filepath}/test.npz", allow_pickle=True)
@@ -44,6 +45,7 @@ def main(input_filepath, output_filepath):
     test_targets = torch.tensor(test["labels"])
     test_data = np.squeeze(test_data)
     test_data = transform_norm(test_data)
+    test_data = test_data.reshape(-1, 1, 28, 28)
 
     np.save(f"{output_filepath}/train_images.npy", data, allow_pickle=True)
     np.save(f"{output_filepath}/train_labels.npy", targets, allow_pickle=True)

@@ -1,95 +1,94 @@
 import argparse
+import os.path
 import sys
 
+import click
 import matplotlib.pyplot as plt
 import torch
+import torch.nn as nn
+from torch import optim
+import numpy as np
 from model import MyAwesomeModel
 
-from src.data.dataloader import dataset
+from torch.utils.data import Dataset, DataLoader
+
+class dataset(Dataset):
+    def __init__(self, train):
+        if train:
+            data = np.load("data/processed/train_images.npy", allow_pickle=True)
+            labels = np.load("data/processed/train_labels.npy", allow_pickle=True)
+        else:
+            data = np.load("data/processed/test_images.npy", allow_pickle=True)
+            labels = np.load("data/processed/test_labels.npy", allow_pickle=True)
+
+        self.data = torch.tensor(data)
+        self.labels = torch.tensor(labels)
+
+    def __getitem__(self, item):
+        return self.data[item].float(), self.labels[item]
+
+    def __len__(self):
+        return len(self.data)
+
+@click.command()
+@click.option("--lr", default=1e3, help="learning rate to use for training")
+@click.option("--epoch", default=30, help="amount of epochs to train for")
+@click.option("--batch_size", default=16, help="batch size for training")
+def train(lr, epoch, batch_size):
+    print("Training day and night")
+    print("lr: ", lr)
+
+    model = MyAwesomeModel()
+    train_set = dataset(train=True)
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    epochs = epoch
+
+    if not os.path.exists(f"models/{model.name}/"):
+        os.makedirs(f"models/{model.name}/")
+    if not os.path.exists(f"reports/figures/{model.name}/"):
+        os.makedirs(f"reports/figures/{model.name}/")
+
+    train_losses = []
+
+    for e in range(epochs):
+        running_loss = 0
+        for data, labels in train_loader:
+            optimizer.zero_grad()
+
+            log_ps = model(data)
+            loss = criterion(log_ps, labels)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+
+        else:
+            if e == 0:
+                torch.save(model.state_dict(), f"models/{model.name}/checkpoint.pth")
+                print(f"Model saved at epoch: {e} with running loss: {running_loss}")
+            else:
+                if running_loss < min(train_losses):
+                    torch.save(model.state_dict(), f"models/{model.name}/checkpoint.pth")
+                    print(f"Model saved at epoch: {e} with running loss: {running_loss}")
+
+            train_losses += [running_loss / len(train_loader)]
+
+            fig, ax = plt.subplots()
+            ax.plot(np.arange(0, e+1), train_losses, color="royalblue")
+            ax.title.set_text(f"Training curve at epoch: {e}")
+            ax.grid()
+
+            plt.savefig(f"reports/figures/{model.name}/{model.name} training_curve")
+
+            ps = torch.exp(model(data))
+            top_p, top_class = ps.topk(1, dim=1)
+            equals = top_class == labels.view(*top_class.shape)
+            accuracy = torch.mean(equals.type(torch.FloatTensor))
+            print(f"Epoch: {e}, Loss: {running_loss/len(train_loader)}, Accuracy: {accuracy.item() * 100}%")
 
 
-class Train(object):
-    """Helper class that will help launch class methods as commands
-    from a single script
-    """
-
-    def __init__(self):
-        parser = argparse.ArgumentParser(
-            description="Script for training", usage="python train_model.py <command>"
-        )
-        parser.add_argument("command", help="Subcommand to run")
-        args = parser.parse_args(sys.argv[1:2])
-        if not hasattr(self, args.command):
-            print("Unrecognized command")
-
-            parser.print_help()
-            exit(1)
-
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
-        # use dispatch pattern to invoke method with same name
-        getattr(self, args.command)()
-
-    def train(self):
-        print("Training day and night")
-        parser = argparse.ArgumentParser(description="Training arguments")
-        parser.add_argument("--lr", default=1e-3)
-        # add any additional argument that you want
-        args = parser.parse_args(sys.argv[2:])
-        print(args)
-
-        # Training Loop
-        model = MyAwesomeModel()
-        model = model.to(self.device)
-        train_set = dataset(train=True)
-        dataloader = torch.utils.data.DataLoader(train_set, batch_size=128)
-        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-        criterion = torch.nn.CrossEntropyLoss()
-
-        n_epoch = 5
-        for epoch in range(n_epoch):
-            loss_tracker = []
-            for batch in dataloader:
-                optimizer.zero_grad()
-                x, y = batch
-                preds = model(x.to(self.device))
-                loss = criterion(preds, y.to(self.device))
-                loss.backward()
-                optimizer.step()
-                loss_tracker.append(loss.item())
-            print(f"Epoch {epoch + 1}/{n_epoch}. Loss: {loss}")
-        torch.save(model.state_dict(), "../../models/trained_model.pt")
-
-        plt.plot(loss_tracker, "-")
-        plt.xlabel("Training step")
-        plt.ylabel("Training loss")
-        plt.savefig("../../reports/figures/training_curve.png")
-
-        return model
-
-    def evaluate(self):
-        print("Evaluating until hitting the ceiling")
-        parser = argparse.ArgumentParser(description="Training arguments")
-        parser.add_argument("load_model_from", default="")
-        # add any additional argument that you want
-        args = parser.parse_args(sys.argv[2:])
-        print(args)
-
-        model = MyAwesomeModel()
-        model.load_state_dict(torch.load(args.load_model_from))
-        model = model.to(self.device)
-
-        test_set = dataset(train=False)
-        dataloader = torch.utils.data.DataLoader(test_set, batch_size=128)
-
-        correct, total = 0, 0
-        for batch in dataloader:
-            x, y = batch
-
-            preds = model(x.to(self.device))
-            preds = preds.argmax(dim=-1)
-
-            correct += (preds == y.to(self.device)).sum().item()
-            total += y.numel()
-
-        print(f"Test set accuracy {correct / total}")
+if __name__ == "__main__":
+    train()
