@@ -12,6 +12,11 @@ jobs:
      steps:
        - uses: actions/checkout@v2
        - uses: iterative/setup-cml@v1
+
+       - uses: iterative/setup-dvc@v1
+       - name: Get data
+         run: dvc pull
+
        - name: Train model
          run: |
            pip install -r requirements.txt  # install dependencies
