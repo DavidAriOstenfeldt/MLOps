@@ -1,4 +1,4 @@
-name: "Run tests"
+name: "Run CodeCov"
 
 on:
   push:
@@ -17,9 +17,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ["3.9", "3.10"]
-        pytorch-version: ["1.11.0", "1.12.0"]
+        os: [ubuntu-latest]
+        python-version: ["3.9"]
 
     steps:
     - name: Checkout
@@ -34,7 +33,6 @@ jobs:
       id: pip-cache
       run: |
         echo "::set-output name=dir::$(pip cache dir)"
-
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
@@ -49,8 +47,15 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements_tests.txt
 
-    - name: Test with pytest
+    - uses: iterative/setup-dvc@v1
+    - name: Get data
+      run: dvc pull
+
+    - name: Run tests and collect coverage
       run: |
+        pip install coverage
         pip install pytest
         wandb disabled
-        pytest -v
+        pytest --cov-config=.coveragerc --cov tests
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v3

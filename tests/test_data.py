@@ -1,11 +1,13 @@
-from torch.utils.data import Dataset
-from tests import _PATH_DATA
-import pickle
 import os
-import torch
-import pytest
 import os.path
+import pickle
+
 import numpy as np
+import pytest
+import torch
+from torch.utils.data import Dataset
+
+from tests import _PATH_DATA
 
 # dataset = MNIST(...)
 # assert len(dataset) == N_train for training and N_test for test

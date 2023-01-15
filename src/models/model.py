@@ -1,12 +1,14 @@
-from torch import nn
-from pytorch_lightning import LightningModule
-from torch import optim
 import torch
+from pytorch_lightning import LightningModule
+from torch import nn, optim
+
 
 class MyAwesomeModel(LightningModule):
-    def __init__(self,
-                 model_name: str,
-                 lr: float = 1e-3,):
+    def __init__(
+        self,
+        model_name: str,
+        lr: float = 1e-3,
+    ):
         super().__init__()
         self.save_hyperparameters()
         self.backbone = nn.Sequential(
@@ -28,9 +30,9 @@ class MyAwesomeModel(LightningModule):
 
     def forward(self, x):
         if x.ndim != 4:
-            raise ValueError('Expected input to a 4D tensor')
+            raise ValueError("Expected input to a 4D tensor")
         if x.shape[1] != 1 or x.shape[2] != 28 or x.shape[3] != 28:
-            raise ValueError('Expected each sample to have shape [1, 28, 28]')
+            raise ValueError("Expected each sample to have shape [1, 28, 28]")
         return self.classifier(self.backbone(x))
 
     def training_step(self, batch, batch_idx):
@@ -51,7 +53,6 @@ class MyAwesomeModel(LightningModule):
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
         return loss
-
 
     def configure_optimizers(self):
         return optim.Adam(self.parameters(), lr=self.lr)

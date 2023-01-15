@@ -5,19 +5,20 @@ import sys
 from typing import Tuple
 
 import click
+import hydra
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 from model import MyAwesomeModel
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.loggers import WandbLogger
 from torch import optim
 from torch.utils.data import DataLoader, Dataset
-import hydra
-from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from pytorch_lightning import Trainer
 
 log = logging.getLogger(__name__)
+
 
 class dataset(Dataset):
     def __init__(self, images: torch.Tensor, labels: torch.Tensor) -> None:
@@ -39,27 +40,24 @@ def train(cfg) -> None:
 
     torch.manual_seed(train_hparams.hyperparameters.seed)
 
-    model = MyAwesomeModel(model_name=model_hparams.hyperparameters.model_name,
-                           lr=train_hparams.hyperparameters.lr,)
-
+    model = MyAwesomeModel(
+        model_name=model_hparams.hyperparameters.model_name,
+        lr=train_hparams.hyperparameters.lr,
+    )
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath="./models",
-        monitor="val_loss",
-        mode="min"
+        dirpath="./models", monitor="val_loss", mode="min"
     )
 
     early_stopping_callback = EarlyStopping(
-        monitor='train_loss',
+        monitor="train_loss",
         patience=train_hparams.hyperparameters.patience,
         verbose=True,
-        mode="min"
+        mode="min",
     )
 
     accelerator = "gpu" if train_hparams.hyperparameters.cuda else "cpu"
-    wandb_logger = WandbLogger(
-        project="mlops_mnist", entity="davos", log_model="all"
-    )
+    wandb_logger = WandbLogger(project="mlops_mnist", entity="davos", log_model="all")
 
     for key, val in train_hparams.hyperparameters.items():
         wandb_logger.experiment.config[key] = val
@@ -71,7 +69,7 @@ def train(cfg) -> None:
         limit_train_batches=train_hparams.hyperparameters.limit_train_batches,
         log_every_n_steps=1,
         callbacks=[checkpoint_callback, early_stopping_callback],
-        logger=wandb_logger
+        logger=wandb_logger,
     )
 
     log.info(f"device (accelerator): {accelerator}")
@@ -87,7 +85,7 @@ def train(cfg) -> None:
         train_data,
         batch_size=train_hparams.hyperparameters.batch_size,
         num_workers=1,
-        shuffle=True
+        shuffle=True,
     )
 
     with open(train_hparams.hyperparameters.val_data_path, "rb") as handle:
@@ -98,13 +96,10 @@ def train(cfg) -> None:
 
     val_data = dataset(val_image_data, val_labels.long())
     val_loader = DataLoader(
-        val_data,
-        batch_size=train_hparams.hyperparameters.batch_size,
-        num_workers=1
+        val_data, batch_size=train_hparams.hyperparameters.batch_size, num_workers=1
     )
 
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-
 
 
 if __name__ == "__main__":
