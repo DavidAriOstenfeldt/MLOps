@@ -1,6 +1,13 @@
 MLOps
 ==============================
 
+[![codecov](https://codecov.io/gh/DavidAriOstenfeldt/MLOps_git/branch/main/graph/badge.svg?token=DW6XAXYSZR)](https://codecov.io/gh/DavidAriOstenfeldt/MLOps_git)
+![example workflow](https://github.com/DavidAriOstenfeldt/MLOps_git/actions/workflows/codecoverage.yml/badge.svg)
+![example workflow](https://github.com/DavidAriOstenfeldt/MLOps_git/actions/workflows/tests.yml/badge.svg)
+![example workflow](https://github.com/DavidAriOstenfeldt/MLOps_git/actions/workflows/flake8.yml/badge.svg)
+![example workflow](https://github.com/DavidAriOstenfeldt/MLOps_git/actions/workflows/isort.yml/badge.svg)
+
+
 Project including exercises and projects made during the MLOps course at DTU in January 2023
 
 Project Organization
