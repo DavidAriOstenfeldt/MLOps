@@ -9,7 +9,7 @@ name: train-my-model
        - name: Train model
          run: |
            pip install -r requirements.txt  # install dependencies
-           python train.py  # run training
+           python train_model_cml.py  # run training
        - name: Write report
          env:
            # this authenticates that the right permissions are in place

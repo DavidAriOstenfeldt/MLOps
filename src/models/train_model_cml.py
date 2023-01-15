@@ -2,16 +2,16 @@ import logging
 from typing import Tuple
 
 import hydra
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from model import MyAwesomeModel
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
+from sklearn.metrics import (ConfusionMatrixDisplay, classification_report,
+                             confusion_matrix)
 from torch.utils.data import DataLoader, Dataset
-
-import matplotlib.pyplot as plt
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 
 log = logging.getLogger(__name__)
 
@@ -111,9 +111,10 @@ def train(cfg) -> None:
     with open("classification_report.txt", "w") as outfile:
         outfile.write(report)
 
-    confmat = confusion_matrix(target,preds)
-    disp = ConfusionMatrixDisplay(cm = confmat)
-    plt.savefig("confusion_matrix.png")
+    confmat = confusion_matrix(target, preds)
+    disp = ConfusionMatrixDisplay(cm=confmat)
+    plt.savefig("confusion_matrix.png", disp)
+
 
 if __name__ == "__main__":
     train()

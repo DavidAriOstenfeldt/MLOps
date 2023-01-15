@@ -20,7 +20,8 @@ class TestClass:
             self.model(torch.rand(1, 28, 28)).shape == (1, 10)
 
         with pytest.raises(
-            ValueError, match=re.escape("Expected each sample to have shape [1, 28, 28]")
+            ValueError,
+            match=re.escape("Expected each sample to have shape [1, 28, 28]"),
         ):
             self.model(torch.rand(1, 3, 28, 28)).shape == (1, 10)
             self.model(torch.rand(1, 1, 6, 28)).shape == (1, 10)
