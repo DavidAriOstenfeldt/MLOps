@@ -1,6 +1,8 @@
 import argparse
+import logging
 import os.path
 import sys
+from typing import Tuple
 
 import click
 import matplotlib.pyplot as plt
@@ -10,91 +12,99 @@ import torch.nn as nn
 from model import MyAwesomeModel
 from torch import optim
 from torch.utils.data import DataLoader, Dataset
+import hydra
+from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning import Trainer
 
+log = logging.getLogger(__name__)
 
 class dataset(Dataset):
-    def __init__(self, train):
-        if train:
-            data = np.load("data/processed/train_images.npy", allow_pickle=True)
-            labels = np.load("data/processed/train_labels.npy", allow_pickle=True)
-        else:
-            data = np.load("data/processed/test_images.npy", allow_pickle=True)
-            labels = np.load("data/processed/test_labels.npy", allow_pickle=True)
+    def __init__(self, images: torch.Tensor, labels: torch.Tensor) -> None:
+        self.data = images
+        self.labels = labels
 
-        self.data = torch.tensor(data)
-        self.labels = torch.tensor(labels)
-
-    def __getitem__(self, item):
+    def __getitem__(self, item: int) -> Tuple[torch.Tensor, torch.Tensor]:
         return self.data[item].float(), self.labels[item]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data)
 
 
-@click.command()
-@click.option("--lr", default=1e3, help="learning rate to use for training")
-@click.option("--epoch", default=30, help="amount of epochs to train for")
-@click.option("--batch_size", default=16, help="batch size for training")
-def train(lr, epoch, batch_size):
-    print("Training day and night")
-    print("lr: ", lr)
+@hydra.main(version_base=None, config_path="config", config_name="config.yaml")
+def train(cfg) -> None:
+    log.info("Training day and night")
+    model_hparams = cfg.model
+    train_hparams = cfg.training
 
-    model = MyAwesomeModel()
-    train_set = dataset(train=True)
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+    torch.manual_seed(train_hparams.hyperparameters.seed)
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-    epochs = epoch
+    model = MyAwesomeModel(model_name=model_hparams.hyperparameters.model_name,
+                           lr=train_hparams.hyperparameters.lr,)
 
-    if not os.path.exists(f"models/{model.name}/"):
-        os.makedirs(f"models/{model.name}/")
-    if not os.path.exists(f"reports/figures/{model.name}/"):
-        os.makedirs(f"reports/figures/{model.name}/")
 
-    train_losses = []
+    checkpoint_callback = ModelCheckpoint(
+        dirpath="./models",
+        monitor="val_loss",
+        mode="min"
+    )
 
-    for e in range(epochs):
-        running_loss = 0
-        for data, labels in train_loader:
-            optimizer.zero_grad()
+    early_stopping_callback = EarlyStopping(
+        monitor='train_loss',
+        patience=train_hparams.hyperparameters.patience,
+        verbose=True,
+        mode="min"
+    )
 
-            log_ps = model(data)
-            loss = criterion(log_ps, labels)
-            loss.backward()
-            optimizer.step()
+    accelerator = "gpu" if train_hparams.hyperparameters.cuda else "cpu"
+    wandb_logger = WandbLogger(
+        project="mlops_mnist", entity="personal", log_model="all"
+    )
 
-            running_loss += loss.item()
+    for key, val in train_hparams.hyperparameters.items():
+        wandb_logger.experiment.config[key] = val
 
-        else:
-            if e == 0:
-                torch.save(model.state_dict(), f"models/{model.name}/checkpoint.pth")
-                print(f"Model saved at epoch: {e} with running loss: {running_loss}")
-            else:
-                if running_loss < min(train_losses):
-                    torch.save(
-                        model.state_dict(), f"models/{model.name}/checkpoint.pth"
-                    )
-                    print(
-                        f"Model saved at epoch: {e} with running loss: {running_loss}"
-                    )
+    trainer = Trainer(
+        devices=1,
+        accelerator=accelerator,
+        max_epochs=train_hparams.hyperparameters.epochs,
+        limit_train_batches=train_hparams.hyperparameters.limit_train_batches,
+        log_every_n_steps=1,
+        callbacks=[checkpoint_callback, early_stopping_callback],
+        logger=wandb_logger
+    )
 
-            train_losses += [running_loss / len(train_loader)]
+    log.info(f"device (accelerator): {accelerator}")
 
-            fig, ax = plt.subplots()
-            ax.plot(np.arange(0, e + 1), train_losses, color="royalblue")
-            ax.title.set_text(f"Training curve at epoch: {e}")
-            ax.grid()
+    with open(train_hparams.hyperparameters.train_data_path, "rb") as handle:
+        train_image_data = np.load(handle, allow_pickle=True)
 
-            plt.savefig(f"reports/figures/{model.name}/{model.name} training_curve")
+    with open(train_hparams.hyperparameters.train_labels_path, "rb") as handle:
+        train_labels = np.load(handle, allow_pickle=True)
 
-            ps = torch.exp(model(data))
-            top_p, top_class = ps.topk(1, dim=1)
-            equals = top_class == labels.view(*top_class.shape)
-            accuracy = torch.mean(equals.type(torch.FloatTensor))
-            print(
-                f"Epoch: {e}, Loss: {running_loss/len(train_loader)}, Accuracy: {accuracy.item() * 100}%"
-            )
+    train_data = dataset(train_image_data, train_labels.long())
+    train_loader = DataLoader(
+        train_data,
+        batch_size=train_hparams.hyperparameters.batch_size,
+        num_workers=1,
+        shuffle=True
+    )
+
+    with open(train_hparams.hyperparameters.val_data_path, "rb") as handle:
+        val_image_data = np.load(handle, allow_pickle=True)
+
+    with open(train_hparams.hyperparameters.val_labels_path, "rb") as handle:
+        val_labels = np.load(handle, allow_pickle=True)
+
+    val_data = dataset(val_image_data, val_labels.long())
+    val_loader = DataLoader(
+        val_data,
+        batch_size=train_hparams.hyperparameters.batch_size,
+        num_workers=1
+    )
+
+    trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+
 
 
 if __name__ == "__main__":

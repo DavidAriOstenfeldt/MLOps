@@ -1,0 +1,13 @@
+hyperparameters:
+        batch_size: 100
+        lr: 1e-3
+        epochs: 20
+        seed: 42
+        cuda: False
+        limit_train_batches: 0.1
+        patience: 10
+        train_data_path: 'data/processed/train_images.npy'
+        train_labels_path: 'data/processed/train_labels.npy'
+        val_data_path: 'data/processed/test_images.npy'
+        val_labels_path: 'data/processed/test_labels.npy'
+        model_out_path: 'models/'

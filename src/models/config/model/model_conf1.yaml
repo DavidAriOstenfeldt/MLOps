@@ -1,0 +1,3 @@
+#config.yaml
+hyperparameters:
+  model_name: corruptmnist_cnn
