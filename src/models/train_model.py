@@ -1,20 +1,13 @@
-import argparse
 import logging
-import os.path
-import sys
 from typing import Tuple
 
-import click
 import hydra
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn as nn
 from model import MyAwesomeModel
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-from torch import optim
 from torch.utils.data import DataLoader, Dataset
 
 log = logging.getLogger(__name__)
