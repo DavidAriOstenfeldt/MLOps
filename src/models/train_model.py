@@ -58,7 +58,7 @@ def train(cfg) -> None:
 
     accelerator = "gpu" if train_hparams.hyperparameters.cuda else "cpu"
     wandb_logger = WandbLogger(
-        project="mlops_mnist", entity="personal", log_model="all"
+        project="mlops_mnist", entity="davos", log_model="all"
     )
 
     for key, val in train_hparams.hyperparameters.items():
