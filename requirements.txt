@@ -11,6 +11,7 @@ python-dotenv>=0.5.1
 wandb
 pytorch-lightning
 hydra-core
+scikit-learn
 
 # backwards compatibility
 pathlib2
