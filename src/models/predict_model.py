@@ -1,21 +1,15 @@
 import click
-import numpy as np
 import torch
-from model import MyAwesomeModel
+import yaml
+from yaml.loader import SafeLoader
 from torch.utils.data import DataLoader, Dataset
+import numpy as np
 
 
 class dataset(Dataset):
-    def __init__(self, train):
-        if train:
-            data = np.load("data/processed/train_images.npy", allow_pickle=True)
-            labels = np.load("data/processed/train_labels.npy", allow_pickle=True)
-        else:
-            data = np.load("data/processed/test_images.npy", allow_pickle=True)
-            labels = np.load("data/processed/test_labels.npy", allow_pickle=True)
-
-        self.data = torch.tensor(data)
-        self.labels = torch.tensor(labels)
+    def __init__(self, images, labels):
+        self.data = images
+        self.labels = labels
 
     def __getitem__(self, item):
         return self.data[item].float(), self.labels[item]
@@ -25,31 +19,47 @@ class dataset(Dataset):
 
 
 @click.command()
-@click.argument("model_checkpoint")
-@click.argument("test_path")
-def evaluate(model_checkpoint, test_path):
-    print("eEvaluating until ceiling hit")
-    print(model_checkpoint)
+@click.argument("model_filepath", type=click.Path(exists=True))
+@click.argument("test_filepath", type=click.Path(exists=True))
+@click.argument("test_labels_filepath", type=click.Path(exists=True))
+def evaluate(model_filepath, test_filepath, test_labels_filepath):
+    print("Evaluating model")
 
-    model = MyAwesomeModel()
-    state_dict = torch.load(model_checkpoint)
-    model.load_state_dict(state_dict)
+    with open(model_filepath + ".hydra/config.yaml") as f:
+        params = yaml.load(f, Loader=SafeLoader)
 
-    test_set = dataset(train=False)
-    test_loader = DataLoader(test_set, batch_size=64, shuffle=True)
+    model = timm.create_model(
+        params.model.hyperparameters.model_name,
+        pretrained=params.model.hyperparameters.pretrained,
+        in_chans=params.model.hyperparameters.in_chans,
+        num_classes=params.model.hyperparameters.num_classes,
+    )
 
-    with torch.no_grad():
-        model.eval()
+    model.load_state_dict(torch.load(model_filepath + "/trained_model.pt"))
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = model.to(device)
+    model.eval()
 
-        accuracy = 0
-        for images, labels in test_loader:
-            ps = torch.exp(model(images))
-            top_p, top_class = ps.topk(1, dim=1)
-            equals = top_class == labels.view(*top_class.shape)
-            accuracy_ = torch.mean(equals.type(torch.FloatTensor))
-            accuracy += accuracy_.item()
+    with open(test_filepath, "rb") as handle:
+        image_data = np.load(handle)
 
-        print(f"Accuracy: {accuracy}")
+    with open(test_labels_filepath, "rb") as handle:
+        image_labels = np.load(handle)
+
+    data = dataset(image_data, image_labels.long())
+    dataloader = DataLoader(data, batch_size=100)
+
+    correct, total = 0, 0
+    for batch in dataloader:
+        x, y = batch
+
+        preds = model(x.to(device))
+        preds = preds.argmax(dim=-1)
+
+        correct += (preds == y.to(device)).sum().item()
+        total += y.numel()
+
+    print(f"Test set accuracy {correct / total}")
 
 
 if __name__ == "__main__":
