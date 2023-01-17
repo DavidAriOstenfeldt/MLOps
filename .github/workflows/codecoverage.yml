@@ -47,9 +47,9 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements_tests.txt
 
-    - uses: iterative/setup-dvc@v1
-    - name: Get data
-      run: dvc pull
+   # - uses: iterative/setup-dvc@v1
+   # - name: Get data
+   #   run: dvc pull
 
     - name: Run tests and collect coverage
       run: |
